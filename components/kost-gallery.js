@@ -11,7 +11,6 @@ export function KostGallery({ title, imageUrls }) {
     return null;
   }
 
-  const activeImageUrl = galleryImages[activeIndex] || galleryImages[0];
   const canNavigate = galleryImages.length > 1;
 
   function showPreviousImage() {
@@ -36,15 +35,24 @@ export function KostGallery({ title, imageUrls }) {
 
   return (
     <div>
-      <div className="relative h-[420px] w-full">
-        <Image
-          src={activeImageUrl}
-          alt={title}
-          fill
-          className="object-cover"
-          sizes="(max-width: 1024px) 100vw, 66vw"
-          priority
-        />
+      <div className="relative h-[420px] w-full overflow-hidden">
+        <div
+          className="flex h-full transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        >
+          {galleryImages.map((imageUrl, index) => (
+            <div key={`${imageUrl}-${index}`} className="relative h-full w-full shrink-0">
+              <Image
+                src={imageUrl}
+                alt={`${title} gallery ${index + 1}`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 66vw"
+                priority={index === 0}
+              />
+            </div>
+          ))}
+        </div>
 
         {canNavigate ? (
           <>
@@ -54,7 +62,7 @@ export function KostGallery({ title, imageUrls }) {
               className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-semibold text-[#111827] shadow-sm transition hover:scale-[1.03]"
               aria-label="Show previous image"
             >
-              ‹
+              &#8249;
             </button>
             <button
               type="button"
@@ -62,7 +70,7 @@ export function KostGallery({ title, imageUrls }) {
               className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-semibold text-[#111827] shadow-sm transition hover:scale-[1.03]"
               aria-label="Show next image"
             >
-              ›
+              &#8250;
             </button>
             <div className="absolute bottom-4 right-4 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
               {activeIndex + 1} / {galleryImages.length}
