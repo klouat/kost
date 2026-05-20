@@ -62,12 +62,14 @@ function buildNavItems(user) {
   if (user) {
     if (user.role === "buyer") {
       items.push({ href: "/bookmarks", label: "Bookmarks" });
+      items.push({ href: "/chat", label: "Chat" });
       return items;
     }
 
     if (user.role === "seller") {
       items.push({ href: "/dashboard", label: "Dashboard" });
       items.push({ href: "/transactions", label: "Transactions" });
+      items.push({ href: "/chat", label: "Chat" });
       items.push({ href: "/my-kost", label: "My Kost" });
       return items;
     }
@@ -142,7 +144,18 @@ function buildProfileMenuItems(user) {
     return [
       { href: "/dashboard", label: "Dashboard" },
       { href: "/bookmarks", label: "Bookmarks" },
+      { href: "/chat", label: "Chat" },
       { href: "/transactions", label: "Transactions" },
+      { href: "/settings", label: "Settings" }
+    ];
+  }
+
+  if (user.role === "seller") {
+    return [
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/transactions", label: "Transactions" },
+      { href: "/chat", label: "Chat" },
+      { href: "/my-kost", label: "My Kost" },
       { href: "/settings", label: "Settings" }
     ];
   }

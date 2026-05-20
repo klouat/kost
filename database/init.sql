@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role ENUM('buyer', 'seller', 'admin') NOT NULL DEFAULT 'buyer',
   profile_image_url VARCHAR(500) NOT NULL DEFAULT '',
-  wallet_address VARCHAR(255) NOT NULL DEFAULT '',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -49,8 +48,7 @@ CREATE TABLE IF NOT EXISTS properties (
   location VARCHAR(255) NOT NULL,
   distance VARCHAR(255) NOT NULL,
   rating DECIMAL(3,2) NOT NULL,
-  monthly_price INT UNSIGNED NOT NULL DEFAULT 0,
-  monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000000,
+  monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000001,
   image_url VARCHAR(500) NOT NULL DEFAULT '',
   image_urls JSON NULL,
   gradient VARCHAR(120) NOT NULL DEFAULT '',
@@ -108,6 +106,49 @@ CREATE TABLE IF NOT EXISTS property_reviews (
     CHECK (rating BETWEEN 1 AND 5)
 );
 
+CREATE TABLE IF NOT EXISTS chat_threads (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  transaction_id INT UNSIGNED NOT NULL,
+  property_id INT UNSIGNED NOT NULL,
+  buyer_user_id INT UNSIGNED NOT NULL,
+  seller_user_id INT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_chat_threads_transaction (transaction_id),
+  KEY idx_chat_threads_buyer (buyer_user_id, updated_at),
+  KEY idx_chat_threads_seller (seller_user_id, updated_at),
+  CONSTRAINT fk_chat_threads_transaction
+    FOREIGN KEY (transaction_id) REFERENCES transactions (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_chat_threads_property
+    FOREIGN KEY (property_id) REFERENCES properties (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_chat_threads_buyer
+    FOREIGN KEY (buyer_user_id) REFERENCES users (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_chat_threads_seller
+    FOREIGN KEY (seller_user_id) REFERENCES users (id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  thread_id INT UNSIGNED NOT NULL,
+  sender_user_id INT UNSIGNED NOT NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_chat_messages_thread_created (thread_id, created_at),
+  KEY idx_chat_messages_sender (sender_user_id),
+  CONSTRAINT fk_chat_messages_thread
+    FOREIGN KEY (thread_id) REFERENCES chat_threads (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_chat_messages_sender
+    FOREIGN KEY (sender_user_id) REFERENCES users (id)
+    ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS saved_properties (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id INT UNSIGNED NOT NULL,
@@ -163,7 +204,7 @@ SET @properties_image_exists = (
 );
 SET @properties_image_sql = IF(
   @properties_image_exists = 0,
-  'ALTER TABLE properties ADD COLUMN image_url VARCHAR(500) NOT NULL DEFAULT '''' AFTER monthly_price',
+  'ALTER TABLE properties ADD COLUMN image_url VARCHAR(500) NOT NULL DEFAULT '''' AFTER monthly_rent_eth',
   'SELECT 1'
 );
 PREPARE properties_image_stmt FROM @properties_image_sql;
@@ -195,12 +236,28 @@ SET @properties_rent_exists = (
 );
 SET @properties_rent_sql = IF(
   @properties_rent_exists = 0,
-  'ALTER TABLE properties ADD COLUMN monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000000 AFTER monthly_price',
+  'ALTER TABLE properties ADD COLUMN monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000001 AFTER rating',
   'SELECT 1'
 );
 PREPARE properties_rent_stmt FROM @properties_rent_sql;
 EXECUTE properties_rent_stmt;
 DEALLOCATE PREPARE properties_rent_stmt;
+
+SET @properties_monthly_price_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'properties'
+    AND column_name = 'monthly_price'
+);
+SET @properties_monthly_price_drop_sql = IF(
+  @properties_monthly_price_exists = 1,
+  'ALTER TABLE properties DROP COLUMN monthly_price',
+  'SELECT 1'
+);
+PREPARE properties_monthly_price_drop_stmt FROM @properties_monthly_price_drop_sql;
+EXECUTE properties_monthly_price_drop_stmt;
+DEALLOCATE PREPARE properties_monthly_price_drop_stmt;
 
 SET @transactions_tenant_exists = (
   SELECT COUNT(*)
@@ -267,72 +324,81 @@ EXECUTE transactions_deposit_drop_stmt;
 DEALLOCATE PREPARE transactions_deposit_drop_stmt;
 
 ALTER TABLE properties
-MODIFY COLUMN monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000000;
+MODIFY COLUMN monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000001;
 
 ALTER TABLE transactions
 MODIFY COLUMN amount_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000000;
+
+SET @users_wallet_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'users'
+    AND column_name = 'wallet_address'
+);
+SET @users_wallet_drop_sql = IF(
+  @users_wallet_exists = 1,
+  'ALTER TABLE users DROP COLUMN wallet_address',
+  'SELECT 1'
+);
+PREPARE users_wallet_drop_stmt FROM @users_wallet_drop_sql;
+EXECUTE users_wallet_drop_stmt;
+DEALLOCATE PREPARE users_wallet_drop_stmt;
 
 UPDATE properties
 SET image_urls = JSON_ARRAY(image_url)
 WHERE image_url <> ''
   AND (image_urls IS NULL OR JSON_LENGTH(image_urls) = 0);
 
-INSERT INTO users (name, email, password_hash, role, profile_image_url, wallet_address)
+INSERT INTO users (name, email, password_hash, role, profile_image_url)
 VALUES
   (
     'Buyer Demo',
     'buyer@kosescrow.local',
     '7b622b292c225decc4fbe0ac7b0ab386:a4f6dd38d5307e4c85f7c95968ba01983400209b9faa9f9c0e6453099d20bcd4266b5255d52622d1350a7532ce980a9f794a6ba0100d978020876822f9fdfc9d',
     'buyer',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-    '0x84F2aA9Bd1c2724D215f665fA0D73cC91B6872c1'
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'
   ),
   (
     'Seller Demo',
     'seller@kosescrow.local',
     'f35608ac47b2ee8a771c38d4b07b4e92:a6005926f67c23f529ed88d6228c2f83126e6d97739fc0929452e7a2c32ad723584fede610a2857614065ea18efc80a944ec7398c9163cb772a2b9f501de8d84',
     'seller',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-    '0x62A0b5f3d8aAeD31f44D30c1108c37C5b87C91bd'
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80'
   ),
   (
     'Admin Demo',
     'admin@kosescrow.local',
     'aa7fc51f359ff082dfe85b4cf9883d06:705e6dda1f8a1244876127ea472851904279aac8b5bacca608826052857cda543e586af1867d7851a5daa1164c16de5f382af4fd8b9f62ca9bec9d22d112c17a',
     'admin',
-    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-    '0x3319Ad7c8420A4dD52891F0A93eC8891a0C1eF80'
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80'
   ),
   (
     'Campus Renter',
     'campus@kosescrow.local',
     '7b622b292c225decc4fbe0ac7b0ab386:a4f6dd38d5307e4c85f7c95968ba01983400209b9faa9f9c0e6453099d20bcd4266b5255d52622d1350a7532ce980a9f794a6ba0100d978020876822f9fdfc9d',
     'buyer',
-    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
-    '0x9dA458CA55E16B2fD1A6714f1f81283E6B4d91A1'
+    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80'
   ),
   (
     'Remote Worker',
     'remote@kosescrow.local',
     '7b622b292c225decc4fbe0ac7b0ab386:a4f6dd38d5307e4c85f7c95968ba01983400209b9faa9f9c0e6453099d20bcd4266b5255d52622d1350a7532ce980a9f794a6ba0100d978020876822f9fdfc9d',
     'buyer',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
-    '0x0F2C8cC33f930f12Ab401AD8f4B7a5a2B09572f0'
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80'
   ),
   (
     'Transit Tenant',
     'transit@kosescrow.local',
     '7b622b292c225decc4fbe0ac7b0ab386:a4f6dd38d5307e4c85f7c95968ba01983400209b9faa9f9c0e6453099d20bcd4266b5255d52622d1350a7532ce980a9f794a6ba0100d978020876822f9fdfc9d',
     'buyer',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-    '0x6A1cF39c7Ef913D0183b3A4E0fceF609A2723192'
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80'
   )
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   password_hash = VALUES(password_hash),
   role = VALUES(role),
-  profile_image_url = VALUES(profile_image_url),
-  wallet_address = VALUES(wallet_address);
+  profile_image_url = VALUES(profile_image_url);
 
 INSERT INTO properties (
   owner_user_id,
@@ -341,7 +407,6 @@ INSERT INTO properties (
   location,
   distance,
   rating,
-  monthly_price,
   monthly_rent_eth,
   image_url,
   image_urls,
@@ -360,8 +425,7 @@ VALUES
     'South Jakarta, Indonesia',
     '12 minutes to MRT',
     4.91,
-    0,
-    0.095,
+    0.000000000000000001,
     'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
     JSON_ARRAY(
       'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
@@ -381,8 +445,7 @@ VALUES
     'Yogyakarta, Indonesia',
     '8 minutes to campus',
     4.88,
-    0,
-    0.072,
+    0.000000000000000001,
     'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80',
     JSON_ARRAY(
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80',
@@ -402,8 +465,7 @@ VALUES
     'Bandung, Indonesia',
     '15 minutes to ITB',
     4.95,
-    0,
-    0.081,
+    0.000000000000000001,
     'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80',
     JSON_ARRAY(
       'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80',
@@ -423,8 +485,7 @@ VALUES
     'Surabaya, Indonesia',
     'Near business district',
     4.84,
-    0,
-    0.089,
+    0.000000000000000001,
     'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80',
     JSON_ARRAY(
       'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80',
@@ -443,7 +504,6 @@ ON DUPLICATE KEY UPDATE
   location = VALUES(location),
   distance = VALUES(distance),
   rating = VALUES(rating),
-  monthly_price = VALUES(monthly_price),
   monthly_rent_eth = VALUES(monthly_rent_eth),
   image_url = VALUES(image_url),
   image_urls = VALUES(image_urls),
@@ -453,39 +513,6 @@ ON DUPLICATE KEY UPDATE
   verified = VALUES(verified),
   featured = VALUES(featured),
   sort_order = VALUES(sort_order);
-
-INSERT INTO transactions (
-  property_id,
-  tenant_user_id,
-  status,
-  amount_eth,
-  wallet_address,
-  tx_hash
-)
-SELECT
-  p.id,
-  (SELECT id FROM users WHERE email = 'buyer@kosescrow.local' LIMIT 1),
-  seed.status,
-  seed.amount_eth,
-  seed.wallet_address,
-  seed.tx_hash
-FROM (
-  SELECT 'sunrise-kebayoran' AS slug, 'Full rent paid, waiting for occupancy confirmation' AS status, 0.095 AS amount_eth, '0x84F2aA9Bd1c2724D215f665fA0D73cC91B6872c1' AS wallet_address, '0x7b2e00f6a8d2f76fe6173de5ea8af9d1cd7b1a7f9b677ae5f63baab10241e927' AS tx_hash
-  UNION ALL
-  SELECT 'tugu-loft', 'Admin verification in progress', 0.072, '0x62A0b5f3d8aAeD31f44D30c1108c37C5b87C91bd', '0xc9578657d5fbfd8d2f8c8bc5af4adb99ec283a5fb9d1d6138fdac9cfb0ddf201'
-  UNION ALL
-  SELECT 'dago-garden', 'Released to owner', 0.081, '0x3319Ad7c8420A4dD52891F0A93eC8891a0C1eF80', '0x8fb44d0d20a9b1f7d3b5914eb7817daf7b0dcad4da5a22fa350845e3db12e4f2'
-) AS seed
-INNER JOIN properties p ON p.slug = seed.slug
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM transactions existing
-  WHERE existing.tx_hash = seed.tx_hash
-);
-
-UPDATE transactions
-SET tenant_user_id = (SELECT id FROM users WHERE email = 'buyer@kosescrow.local' LIMIT 1)
-WHERE tenant_user_id IS NULL;
 
 INSERT INTO property_reviews (
   property_id,

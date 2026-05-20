@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const protectedPaths = ["/dashboard", "/transactions", "/wallet", "/settings", "/my-kost", "/admin"];
+const protectedPaths = ["/dashboard", "/transactions", "/chat", "/settings", "/my-kost", "/admin"];
 
 export function middleware(request) {
   const sessionToken = request.cookies.get("kos_session")?.value;
@@ -16,5 +16,5 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/transactions/:path*", "/wallet/:path*", "/settings/:path*", "/my-kost/:path*", "/admin/:path*"]
+  matcher: ["/dashboard/:path*", "/transactions/:path*", "/chat/:path*", "/settings/:path*", "/my-kost/:path*", "/admin/:path*"]
 };

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createTransactionRecord, getUserTransactions } from "@/lib/data";
 import { isValidEthAmount, normalizeEthInput } from "@/lib/eth";
-import { getDefaultWalletAddressForRole } from "@/lib/wallet-config";
+import { REMIX_TENANT_WALLET_ADDRESS } from "@/lib/wallet-config";
 
 export async function GET() {
   try {
@@ -40,16 +40,18 @@ export async function POST(request) {
     const txHash = typeof body.txHash === "string" ? body.txHash.trim() : "";
     const status = typeof body.status === "string" ? body.status.trim() : "";
     const amountEth = normalizeEthInput(body.amountEth);
-    const walletAddress =
-      user.role === "buyer"
-        ? getDefaultWalletAddressForRole(user.role)
-        : typeof body.walletAddress === "string"
-          ? body.walletAddress.trim()
-          : "";
+    const walletAddress = typeof body.walletAddress === "string" ? body.walletAddress.trim() : "";
 
     if (!propertySlug || !txHash || !walletAddress || !status || !isValidEthAmount(amountEth)) {
       return NextResponse.json(
         { error: "Invalid transaction payload." },
+        { status: 400 }
+      );
+    }
+
+    if (user.role === "buyer" && walletAddress.toLowerCase() !== REMIX_TENANT_WALLET_ADDRESS.toLowerCase()) {
+      return NextResponse.json(
+        { error: `Please connect the buyer MetaMask account ${REMIX_TENANT_WALLET_ADDRESS}.` },
         { status: 400 }
       );
     }

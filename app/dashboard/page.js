@@ -25,7 +25,7 @@ export default async function DashboardPage() {
         description={
           user.role === "seller"
             ? "Seller accounts can post kost listings, track approval status, and monitor incoming rental activity."
-            : "Buyer accounts focus on browsing, wallet actions, and tracking rental transactions."
+            : "Buyer accounts focus on browsing listings, starting rent payments, and tracking rental transactions."
         }
       />
 
@@ -81,7 +81,6 @@ export default async function DashboardPage() {
                 <QuickLink href="/my-kost/new" label="Post a new kost" />
                 <QuickLink href="/my-kost" label="Manage my kost posts" />
                 <QuickLink href="/transactions" label="Review incoming transactions" />
-                <QuickLink href="/wallet" label="Connect wallet" />
                 <QuickLink href="/settings" label="Update profile and avatar" />
               </div>
             </section>
@@ -92,7 +91,7 @@ export default async function DashboardPage() {
           <div className="mt-8 grid gap-6 md:grid-cols-3">
             <StatCard label="Rentals as buyer" value={dashboard.summary.renter_transaction_count} />
             <StatCard label="Saved profile" value={1} />
-            <StatCard label="Wallet ready" value={dashboard.summary.renter_transaction_count > 0 ? "Yes" : "No"} />
+            <StatCard label="Buy flow" value="Auto detect" />
           </div>
 
           <div className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -122,7 +121,6 @@ export default async function DashboardPage() {
               <div className="mt-5 space-y-3">
                 <QuickLink href="/marketplace" label="Browse marketplace" />
                 <QuickLink href="/transactions" label="Review my rentals" />
-                <QuickLink href="/wallet" label="Connect wallet" />
                 <QuickLink href="/settings" label="Update profile and avatar" />
               </div>
             </section>

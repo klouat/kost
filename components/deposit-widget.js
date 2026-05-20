@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { payRent } from "@/lib/contract";
-import { connectWallet } from "@/lib/wallet";
+import { detectOrConnectWallet } from "@/lib/wallet";
 import { REMIX_TENANT_WALLET_ADDRESS } from "@/lib/wallet-config";
 
 export function DepositWidget({ property, canPayRent, isOwner, existingTransaction }) {
@@ -13,8 +13,8 @@ export function DepositWidget({ property, canPayRent, isOwner, existingTransacti
   async function handlePayment() {
     try {
       setIsSubmitting(true);
-      setStatus("Connecting to MetaMask...");
-      const walletAddress = await connectWallet();
+      setStatus("Checking MetaMask...");
+      const walletAddress = await detectOrConnectWallet();
 
       if (walletAddress.toLowerCase() !== REMIX_TENANT_WALLET_ADDRESS.toLowerCase()) {
         throw new Error(`Please connect the buyer MetaMask account ${REMIX_TENANT_WALLET_ADDRESS}.`);
@@ -43,7 +43,7 @@ export function DepositWidget({ property, canPayRent, isOwner, existingTransacti
         throw new Error(payload.error || "Payment succeeded on-chain, but the app could not save the transaction.");
       }
 
-      setStatus("Buyer has paid. Waiting for owner confirmation.");
+      setStatus("Buyer has paid. You can now open Transactions and chat with the seller.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Payment failed.");
     } finally {
@@ -99,7 +99,7 @@ function getInitialStatus(existingTransaction) {
     return `Buyer has paid. Current status: ${existingTransaction.status}.`;
   }
 
-  return "Buyer hasn't paid yet. Connect MetaMask to send the rent payment.";
+  return "Buyer hasn't paid yet. MetaMask will be detected automatically when you start payment.";
 }
 
 function InfoRow({ label, value }) {

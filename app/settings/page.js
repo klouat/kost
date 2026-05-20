@@ -62,7 +62,7 @@ export default async function SettingsPage({ searchParams }) {
           </label>
           {user.role === "buyer" ? (
             <div className="rounded-2xl bg-[var(--surface-soft)] px-4 py-4 text-sm text-[var(--body)]">
-              Buyer wallet address is fixed for the Remix demo and cannot be changed here.
+              Buyer payments now detect MetaMask automatically from the property page, so there is no wallet setting to manage here.
             </div>
           ) : null}
           <AuthSubmitButton
