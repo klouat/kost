@@ -4,8 +4,8 @@ This guide explains how to set up and run the current buyer flow for this projec
 
 It matches the current app behavior:
 
-- buyer wallet is fixed to `0x1D9F2136CCD01f39a9c39BEB72Dc0D7514D08fe0`
-- buyer wallet cannot be changed from Settings
+- buyer wallet is detected automatically from the connected MetaMask account during checkout
+- buyer wallet does not need to be registered in Settings
 - property prices use `monthly_rent_eth`
 - transaction amounts use `transactions.amount_eth`
 - old `deposit_eth` columns are removed
@@ -14,7 +14,7 @@ It matches the current app behavior:
 
 1. Owner deploys the `KosEscrow` contract in Remix.
 2. App is configured with the deployed contract address.
-3. Buyer connects the fixed MetaMask buyer wallet.
+3. Buyer connects any MetaMask buyer wallet.
 4. Buyer opens a kost detail page and pays rent through MetaMask.
 5. App saves the transaction hash and payment status in MySQL.
 6. Owner can later call `confirmOccupied()` from the owner wallet in Remix or another contract UI.
@@ -23,14 +23,13 @@ It matches the current app behavior:
 
 Use these addresses for the demo:
 
-- Buyer / tenant: `0x1D9F2136CCD01f39a9c39BEB72Dc0D7514D08fe0`
 - Owner: `0x409f53Cf5Fe9c3EA6D5E6d0B593a359a0ad80794`
 
 Important:
 
-- The buyer must connect MetaMask with the exact buyer address above.
-- The app checks this before sending payment.
-- If a different wallet is connected, the payment button will fail.
+- The app detects the currently connected MetaMask account when the buyer starts payment.
+- The connected buyer wallet is saved into `transactions.wallet_address`.
+- The owner address is still fixed in the contract deployment and receives funds after `confirmOccupied()`.
 
 ## Contract Used In Remix
 
@@ -194,8 +193,7 @@ This is not valid:
 ## Step 5: Connect The Buyer Wallet In MetaMask
 
 1. Open MetaMask.
-2. Switch to the buyer wallet:
-   `0x1D9F2136CCD01f39a9c39BEB72Dc0D7514D08fe0`
+2. Switch to the buyer wallet you want to pay from.
 3. Make sure this wallet has enough ETH for:
    - the rent amount
    - gas fees
@@ -230,7 +228,7 @@ After payment succeeds:
 1. Open `/transactions`
 2. Confirm the new transaction appears
 3. Check that the status is shown
-4. Check that the wallet is the buyer wallet
+4. Check that the wallet matches the MetaMask account used during payment
 5. Check that the tx hash is saved
 
 The current saved status after payment is:
@@ -267,7 +265,7 @@ This will:
 2. Save deployed contract address in `.env.local`.
 3. Start the app and Laragon MySQL.
 4. Make sure the kost has `monthly_rent_eth`.
-5. Connect MetaMask with the fixed buyer wallet.
+5. Connect MetaMask with the buyer wallet you want to use.
 6. Pay from the kost detail page.
 7. Verify the transaction in the app.
 8. Confirm occupancy later from the owner wallet.
@@ -282,11 +280,11 @@ Problem:
 
 Cause:
 
-- the connected wallet is not `0x1D9F2136CCD01f39a9c39BEB72Dc0D7514D08fe0`
+- the connected wallet is not available to the browser, is locked, or is not a valid Ethereum address
 
 Fix:
 
-- switch MetaMask to the fixed buyer wallet
+- unlock MetaMask and reconnect the wallet from the kost detail page
 
 ### Contract Address Is Not Set
 

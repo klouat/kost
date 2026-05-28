@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createTransactionRecord, getUserTransactions } from "@/lib/data";
-import { isValidEthAmount, normalizeEthInput } from "@/lib/eth";
-import { REMIX_TENANT_WALLET_ADDRESS } from "@/lib/wallet-config";
+import { isValidEthAddress, isValidEthAmount, normalizeEthInput } from "@/lib/eth";
 
 export async function GET() {
   try {
@@ -42,16 +41,9 @@ export async function POST(request) {
     const amountEth = normalizeEthInput(body.amountEth);
     const walletAddress = typeof body.walletAddress === "string" ? body.walletAddress.trim() : "";
 
-    if (!propertySlug || !txHash || !walletAddress || !status || !isValidEthAmount(amountEth)) {
+    if (!propertySlug || !txHash || !walletAddress || !status || !isValidEthAmount(amountEth) || !isValidEthAddress(walletAddress)) {
       return NextResponse.json(
         { error: "Invalid transaction payload." },
-        { status: 400 }
-      );
-    }
-
-    if (user.role === "buyer" && walletAddress.toLowerCase() !== REMIX_TENANT_WALLET_ADDRESS.toLowerCase()) {
-      return NextResponse.json(
-        { error: `Please connect the buyer MetaMask account ${REMIX_TENANT_WALLET_ADDRESS}.` },
         { status: 400 }
       );
     }

@@ -60,11 +60,6 @@ export default async function SettingsPage({ searchParams }) {
               Profile pictures are upload-only. Leave this empty if you want to keep your current image.
             </p>
           </label>
-          {user.role === "buyer" ? (
-            <div className="rounded-2xl bg-[var(--surface-soft)] px-4 py-4 text-sm text-[var(--body)]">
-              Buyer payments now detect MetaMask automatically from the property page, so there is no wallet setting to manage here.
-            </div>
-          ) : null}
           <AuthSubmitButton
             idleLabel="Save settings"
             pendingLabel="Saving..."

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { payRent } from "@/lib/contract";
 import { detectOrConnectWallet } from "@/lib/wallet";
-import { REMIX_TENANT_WALLET_ADDRESS } from "@/lib/wallet-config";
 
 export function DepositWidget({ property, canPayRent, isOwner, existingTransaction }) {
   const [status, setStatus] = useState(getInitialStatus(existingTransaction));
@@ -16,11 +15,7 @@ export function DepositWidget({ property, canPayRent, isOwner, existingTransacti
       setStatus("Checking MetaMask...");
       const walletAddress = await detectOrConnectWallet();
 
-      if (walletAddress.toLowerCase() !== REMIX_TENANT_WALLET_ADDRESS.toLowerCase()) {
-        throw new Error(`Please connect the buyer MetaMask account ${REMIX_TENANT_WALLET_ADDRESS}.`);
-      }
-
-      setStatus("Opening MetaMask and preparing the on-chain payment...");
+      setStatus(`Detected MetaMask account ${walletAddress}. Opening the on-chain payment...`);
       const txHash = await payRent(String(property.monthlyRentEth));
       setStatus("Payment was confirmed on-chain. Saving the transaction record...");
 
