@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SectionTitle } from "@/components/section-title";
+import AdminTransactionApprovalButton from "@/components/admin-transaction-approval-button";
 import { requireAdmin } from "@/lib/auth";
 import { getAdminTransactions } from "@/lib/data";
 
@@ -106,6 +107,11 @@ export default async function AdminTransactionsPage({ searchParams }) {
               <span className="truncate text-[var(--primary)]" title={transaction.hash}>
                 {transaction.hash}
               </span>
+              {transaction.operationalStatus === "pending" ? (
+                <div className="xl:col-span-full">
+                  <AdminTransactionApprovalButton transactionId={transaction.id} />
+                </div>
+              ) : null}
             </div>
           ))
         ) : (
