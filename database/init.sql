@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS properties (
   location VARCHAR(255) NOT NULL,
   distance VARCHAR(255) NOT NULL,
   rating DECIMAL(3,2) NOT NULL,
-  monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000001,
+  monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.005,
   image_url VARCHAR(500) NOT NULL DEFAULT '',
   image_urls JSON NULL,
   gradient VARCHAR(120) NOT NULL DEFAULT '',
@@ -236,7 +236,7 @@ SET @properties_rent_exists = (
 );
 SET @properties_rent_sql = IF(
   @properties_rent_exists = 0,
-  'ALTER TABLE properties ADD COLUMN monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000001 AFTER rating',
+  'ALTER TABLE properties ADD COLUMN monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.005 AFTER rating',
   'SELECT 1'
 );
 PREPARE properties_rent_stmt FROM @properties_rent_sql;
@@ -324,7 +324,7 @@ EXECUTE transactions_deposit_drop_stmt;
 DEALLOCATE PREPARE transactions_deposit_drop_stmt;
 
 ALTER TABLE properties
-MODIFY COLUMN monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000001;
+MODIFY COLUMN monthly_rent_eth DECIMAL(36,18) NOT NULL DEFAULT 0.005;
 
 ALTER TABLE transactions
 MODIFY COLUMN amount_eth DECIMAL(36,18) NOT NULL DEFAULT 0.000000000000000000;
@@ -425,7 +425,7 @@ VALUES
     'South Jakarta, Indonesia',
     '12 minutes to MRT',
     4.91,
-    0.000000000000000001,
+    0.005,
     'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
     JSON_ARRAY(
       'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
@@ -445,7 +445,7 @@ VALUES
     'Yogyakarta, Indonesia',
     '8 minutes to campus',
     4.88,
-    0.000000000000000001,
+    0.005,
     'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80',
     JSON_ARRAY(
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80',
@@ -465,7 +465,7 @@ VALUES
     'Bandung, Indonesia',
     '15 minutes to ITB',
     4.95,
-    0.000000000000000001,
+    0.005,
     'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80',
     JSON_ARRAY(
       'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80',
@@ -485,7 +485,7 @@ VALUES
     'Surabaya, Indonesia',
     'Near business district',
     4.84,
-    0.000000000000000001,
+    0.005,
     'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80',
     JSON_ARRAY(
       'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80',
