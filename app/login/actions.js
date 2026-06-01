@@ -12,10 +12,12 @@ export async function loginAction(formData) {
   }
 
   try {
-    await loginUser({ email, password });
+    const { role } = await loginUser({ email, password });
+    if (role === "admin") {
+      redirect("/admin");
+    }
+    redirect("/dashboard");
   } catch (error) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
-
-  redirect("/dashboard");
 }
