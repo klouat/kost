@@ -43,11 +43,11 @@ export default async function NewKostPage({ searchParams }) {
               name="monthlyRentEth"
               inputMode="decimal"
               className="mt-2 w-full rounded-2xl border border-[var(--border)] px-4 py-3 outline-none"
-              placeholder="0.000000000000000001"
+              placeholder="0.005"
               required
             />
             <p className="mt-2 text-sm text-[var(--body)]">
-              Supports up to 18 decimal places. Smallest payable value is 0.000000000000000001 ETH.
+              Supports up to 18 decimal places. Smallest payable value is 0.005 ETH.
             </p>
           </label>
           <ListingImageUpload />
